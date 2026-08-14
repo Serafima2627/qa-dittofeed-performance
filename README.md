@@ -289,3 +289,120 @@ Next:
 * Dittofeed Documentation
 * Grafana k6 Documentation
 * GitHub Codespaces Documentation
+## 8. Manual API Verification
+
+Before running load tests, the ingestion and Admin APIs were verified manually.
+
+### Admin API authentication
+
+The Admin API was checked using:
+
+```bash
+curl -i \
+  -H "Authorization: Bearer $ADMIN_KEY" \
+  "$BASE_URL/api/admin/user-properties?workspaceId=$WORKSPACE_ID"
+```
+
+Result:
+
+```text
+HTTP/1.1 200 OK
+```
+
+This confirmed that the Admin API key and workspace configuration were valid.
+
+### User property registration
+
+A custom `city` user property was registered as a Trait-based property.
+
+The property was verified through the Admin API and appeared in the list of active user properties.
+
+### Identify request
+
+A synthetic user was created with:
+
+```text
+userId: test-0001
+city: Chisinau
+bnpl_eligible: true
+```
+
+The request returned:
+
+```text
+HTTP 204
+```
+
+### Track request
+
+A synthetic transaction event was sent for the same user:
+
+```text
+event: Transaction_Approved
+response_code: 000
+mcc_code: 5499
+tran_amount: 2800
+```
+
+The request returned:
+
+```text
+HTTP 204
+```
+
+### Background processing verification
+
+The user was queried through the Admin API:
+
+```bash
+curl -s -X POST "$BASE_URL/api/admin/users/" \
+  -H "Authorization: Bearer $ADMIN_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "workspaceId": "'"$WORKSPACE_ID"'",
+    "userIds": ["test-0001"],
+    "limit": 10
+  }'
+```
+
+The response contained:
+
+```text
+id: test-0001
+city: Chisinau
+```
+
+This confirmed that the event was not only accepted by the HTTP API, but also processed by the background worker and reflected in the computed user properties.
+
+### Issues found during manual verification
+
+1. `uuidgen` was not installed in GitHub Codespaces.
+
+   Instead of installing an additional package, UUIDs were generated using:
+
+```bash
+cat /proc/sys/kernel/random/uuid
+```
+
+2. The initial `WRITE_KEY` value contained only the `Basic` prefix, which caused:
+
+```text
+HTTP 401
+{"message":"InvalidWriteKey"}
+```
+
+The full value from Dittofeed Authentication settings was stored as:
+
+```text
+WRITE_KEY="Basic <secret>"
+```
+
+3. A GET request to `/api/admin/users` returned a Next.js `404` HTML page.
+
+The correct API call for this environment was a `POST` request to:
+
+```text
+/api/admin/users/
+```
+
+with `workspaceId` and `userIds` in the JSON request body.
