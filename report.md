@@ -174,3 +174,23 @@ Conclusion: a repeatable performance boundary was found, but root-cause attribut
 Dittofeed Lite accepted synthetic traffic with very low HTTP error rates, but successful ingestion alone did not guarantee acceptable performance. The short 10 RPS test passed the HTTP SLO, while 15 RPS already violated p95. Stronger saturation indicators appeared from around 20 RPS, and the spike scenario produced both tail-latency degradation and the first HTTP error.
 
 The main QA conclusion is that HTTP latency, dropped iterations, resource usage, and E2E background-processing latency must be evaluated together.
+
+## 16. Charts
+
+### Track API latency vs load
+
+![Track API latency vs RPS](charts/latency-vs-rps.png)
+
+This chart highlights the p95 SLO violation between 10 and 15 RPS and the sharp p99 degradation at 25 RPS.
+
+### Dropped iterations vs load
+
+![Dropped iterations vs RPS](charts/dropped-iterations.png)
+
+Dropped iterations first appeared at 20 RPS and increased substantially at 25 RPS, providing a stronger saturation signal.
+
+### End-to-end processing latency
+
+![E2E processing latency](charts/e2e-latency.png)
+
+E2E measurements show significant run-to-run variability. The highest observed value was 108 seconds after the shortened soak test. Individual probes should not be interpreted as latency percentiles.
